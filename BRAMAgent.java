@@ -1,5 +1,3 @@
-package OurAgent;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -91,6 +89,7 @@ public class BRAMAgent extends Agent {
 	private Bid previousOfferedBid;
 	private final boolean TEST_EQUIVALENCE = false;
 	int round = 0;
+	private Action lastAction;
 	
 	
 	
@@ -225,10 +224,13 @@ public class BRAMAgent extends Agent {
 			action = new Accept(this.getAgentID(),
 					((ActionWithBid) actionOfPartner).getBid());
 		}
-
+		lastAction = action;
 		return action;
 	}
 
+	public Action getLastAction() {
+		return this.lastAction;
+	}
 	/**
 	 * This function updates the statistics of the bids that were received from
 	 * the opponent
@@ -882,4 +884,3 @@ public class BRAMAgent extends Agent {
 	}
 
 }
-
