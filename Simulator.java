@@ -1,4 +1,3 @@
-package OurAgent;
 import java.util.List;
 
 import java.util.Collections;
@@ -15,7 +14,7 @@ import genius.core.boaframework.NegotiationSession;
 import genius.core.utility.UtilitySpace;
 
 public class Simulator {
-	private Map<String, Float> distribution;
+	private Map<String, Double> distribution;
 	private String bestAgent;
 	private NegotiationSession negotiationSession;
 	
@@ -27,8 +26,8 @@ public class Simulator {
 	private BRAMAgent BramAgent;
 	
 	// We initialize our predictions with chooseAction() for now.
-	private Action HHPrediction = HHagent.chooseAction();
-	private Action BRAMPrediction = HHagent.chooseAction();
+	private Action HHPrediction = null;
+	private Action BRAMPrediction = null;
 	
 	// Confidence in agents:
 	private double confBram = 0.5;
@@ -36,7 +35,7 @@ public class Simulator {
 	
 	public Simulator(NegotiationSession negotiationSession, UtilitySpace utilSpace) {
 		this.negotiationSession = negotiationSession;
-		distribution = new HashMap<String, Float>();
+		distribution = new HashMap<String, Double>();
 		
 		this.learningRate = 0.3;
 		this.worstPredictionDistanceSoFar = 0.3; // Initial value is just an idea/guess.
@@ -67,11 +66,11 @@ public class Simulator {
 		// We can (probably should) also place this method in our eventual agent class, because we also call it there.
 		
 		
-		DefaultActionWithBid HHaction = (DefaultActionWithBid) HHagent.chooseAction();
+		DefaultActionWithBid HHaction = (DefaultActionWithBid) HHPrediction;
 		Bid hhBid = HHaction.getBid();
 		double distanceHH = receivedBid.getDistance(hhBid);
 		
-		DefaultActionWithBid bramAction = (DefaultActionWithBid) BramAgent.chooseAction();
+		DefaultActionWithBid bramAction = (DefaultActionWithBid) BRAMPrediction;
 		Bid bramBid = bramAction.getBid();
 		double distanceBram = receivedBid.getDistance(bramBid);
 		
@@ -100,6 +99,8 @@ public class Simulator {
 		confHH = confHH / totalConf;
 		confBram = confBram / totalConf;
 		
+		this.distribution.put("HH", confHH);
+		this.distribution.put("Bram", confBram);
 		
 		// Formula we use to learn: 
 		// Given 	C-bram (confidence/probability of opponent being Bram) 
@@ -113,11 +114,14 @@ public class Simulator {
 		// C-bramNew = LR + (1 - LR) * ((WP - d-bram)/WP) * C-bramOld 		if best prediction
 		// C-bramNew = 		(1 - LR) * ((WP - d-bram)/WP) * C-bramOld 		if not best prediction
 		// for all agents, than normalize.
-		
+		computeBestAgent();
 	}
 	
+	public String getBestAgent() {
+		return this.bestAgent;
+	}
 	
-	public Map<String, Float> getDistributions() {
+	public Map<String, Double> getDistributions() {
 		return this.distribution;
 	}
 	
@@ -135,7 +139,7 @@ public class Simulator {
 		while(iter.hasNext()) {
 			
 			String agent = iter.next();
-			float agentVal = this.distribution.get(agent);
+			double agentVal = this.distribution.get(agent);
 			if (agentVal > bestAgentVal){
 					bestAgent = agent;
 			}

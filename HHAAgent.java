@@ -1,5 +1,3 @@
-package OurAgent;
-import genius.core.Agent;
 import genius.core.AgentID;
 import genius.core.Bid;
 import genius.core.Domain;
@@ -22,22 +20,14 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.TreeMap;
 
-import agents.anac.y2011.HardHeaded.BidHistory;
-import agents.anac.y2011.HardHeaded.BidSelector;
+import agents.anac.y2011.HardHeaded.*;
 
-
-public class HHAAgent extends Agent {
-	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 2424877584481580072L;
+public class HHAAgent {
 	
 	NegotiationSession negoSess;
 	AdditiveUtilitySpace utilSpace;
-	private BidSelector bidSelector;
-	private BidHistory bidHistory;
-	
+	BidSelector bidSelector;
+	BidHistory bidHistory;
 	private double MINIMUM_BID_UTILITY = 0.585D;
 	private final int TOP_SELECTED_BIDS = 4;
 	private final double LEARNING_COEF = 0.2D;
@@ -66,6 +56,9 @@ public class HHAAgent extends Agent {
 	private Random random100;
 	private Random random200;
 	int round;
+	
+	private Bid lastBid;
+	private Action lastAction;
 
 
 	
@@ -73,7 +66,6 @@ public class HHAAgent extends Agent {
 		
 		this.negoSess = negoSess;
 		this.utilSpace = (AdditiveUtilitySpace) utilSpace;
-		
 		bidSelector = new BidSelector(this.utilSpace);
 		bidHistory = new BidHistory(this.utilSpace);
 		oppUtility = (AdditiveUtilitySpace) utilSpace.copy();
@@ -121,10 +113,8 @@ public class HHAAgent extends Agent {
 	}
 	
 	public void ReceiveMessage(Action pAction) {
-		// if the received message is an Offer, get opponent bid, add it to bidHistory.
-		
 		double opbestvalue;
-		if (pAction instanceof Offer) { 
+		if (pAction instanceof Offer) {
 			opponentLastBid = ((Offer) pAction).getBid();
 			bidHistory.addOpponentBid(opponentLastBid);
 			updateLearner();
@@ -153,9 +143,12 @@ public class HHAAgent extends Agent {
 
 	}
 	
+	public Bid getLastBid() {
+		return this.lastBid;
+	}
+	
 	private void updateLearner() {
 
-		// If only 1 bid is made, do nothing
 		if (bidHistory.getOpponentBidCount() < 2)
 			return;
 
@@ -181,7 +174,8 @@ public class HHAAgent extends Agent {
 
 		// re-weighing issues while making sure that the sum remains 1
 		for (Integer i : lastDiffSet.keySet()) {
-			if (lastDiffSet.get(i) == 03 && oppUtility.getWeight(i) < maximumWeight) // why 03
+			if (lastDiffSet.get(i) == 0
+					&& oppUtility.getWeight(i) < maximumWeight)
 				oppUtility.setWeight(domain.getObjectivesRoot().getObjective(i),
 						(oppUtility.getWeight(i) + goldenValue) / totalSum);
 			else
@@ -354,12 +348,17 @@ public class HHAAgent extends Agent {
 							.getUtility(offer.getValue());
 				}
 				newAction = new Offer(new AgentID("HHS"), offer.getValue());
+				lastBid = offer.getValue();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
+		this.lastAction = newAction;
 		return newAction;
+	}
+	
+	public Action getLastAction() {
+		return this.lastAction;
 	}
 	
 	public void updateUtilitySpace(UtilitySpace utilSpace) {
