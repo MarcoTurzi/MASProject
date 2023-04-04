@@ -1,15 +1,14 @@
 package OurAgent;
 
-import agents.anac.y2011.HardHeaded.KLH;
-import genius.core.actions.Action;
+import agents.anac.y2011.BramAgent.BRAMAgent;
 import genius.core.boaframework.NegotiationSession;
 import genius.core.utility.AbstractUtilitySpace;
 import genius.core.utility.AdditiveUtilitySpace;
 import genius.core.utility.UtilitySpace;
 
-public class HHAAgent extends KLH {
-	
-	public HHAAgent(NegotiationSession negoSession, UtilitySpace utilSpace) {
+public class OurBRAMAgent extends BRAMAgent {
+
+	public OurBRAMAgent(NegotiationSession negoSession, UtilitySpace utilSpace) {
 		
 		this.utilitySpace = (AbstractUtilitySpace) utilSpace;
 		
@@ -18,16 +17,9 @@ public class HHAAgent extends KLH {
 		
 	}
 	
-	//public void setUtilitySpace(AdditiveUtilitySpace oppUtilSpace) {
-	//	
-//		this.utilitySpace = oppUtilSpace;
-		
-	//
-	
 	public void updateUtilitySpace(UtilitySpace utilSpace) {
 		
 		this.utilitySpace = (AdditiveUtilitySpace)utilSpace;
 		
 	}
-	
 }
