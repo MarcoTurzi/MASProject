@@ -1,0 +1,23 @@
+import agents.anac.y2011.HardHeaded.KLH;
+import genius.core.boaframework.NegotiationSession;
+import genius.core.utility.AdditiveUtilitySpace;
+import genius.core.utility.UtilitySpace;
+
+public class HHAgent extends KLH {
+
+	public HHAgent(NegotiationSession negoSession, AdditiveUtilitySpace utilSpace) {
+		
+		this.utilitySpace = utilSpace;
+		this.timeline = negoSession.getTimeline();
+		init();
+		
+	}
+	
+	public void setUtilitySpace(AdditiveUtilitySpace oppUtilSpace) {
+		
+		this.utilitySpace = oppUtilSpace;
+		
+	}
+	
+}
+
