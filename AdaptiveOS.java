@@ -1,30 +1,26 @@
 package OurAgent;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import agents.bayesianopponentmodel.OpponentModelUtilSpace;
+
 import genius.core.AgentID;
 import genius.core.Bid;
 import genius.core.actions.ActionWithBid;
 import genius.core.actions.Offer;
 import genius.core.bidding.BidDetails;
-import genius.core.boaframework.AcceptanceStrategy;
 import genius.core.boaframework.NegotiationSession;
 import genius.core.boaframework.OMStrategy;
 import genius.core.boaframework.OfferingStrategy;
 import genius.core.boaframework.OpponentModel;
-import genius.core.utility.UtilitySpace;
+import genius.core.utility.AdditiveUtilitySpace;
 
 public class AdaptiveOS extends OfferingStrategy {
 
 	private Simulator simulator;
 	private AdaptiveAC acceptanceStrategy;
-	private HHAAgent HHagent;
-	private OurBRAMAgent bramAgent;
-	private TFTAgent tftAgent;
-
-	private final double MIN_UTILITY_OPEN = 0.9;
+	private BoaHH HHagent;
+	private BoaBRAM bramAgent;
+	private BoaTFT tftAgent;
 	
 	public AdaptiveOS(Simulator simulator, AdaptiveAC accStrategy) {
 		this.simulator = simulator;
@@ -37,21 +33,14 @@ public class AdaptiveOS extends OfferingStrategy {
 	public void init(NegotiationSession negotiationSession, OpponentModel opponentModel, OMStrategy omStrategy,
 			Map<String, Double> parameters) throws Exception {
 		super.init(negotiationSession, opponentModel, omStrategy, parameters);
-		this.HHagent = new HHAAgent(negotiationSession, negotiationSession.getUtilitySpace());
-		this.bramAgent = new OurBRAMAgent(negotiationSession, negotiationSession.getUtilitySpace());
-		this.tftAgent = new TFTAgent(negotiationSession, negotiationSession.getUtilitySpace());
+		simulator.initiate(negotiationSession, negotiationSession.getUtilitySpace());
+		this.HHagent = new BoaHH(negotiationSession, (AdditiveUtilitySpace)negotiationSession.getUtilitySpace());
+		this.bramAgent = new BoaBRAM(negotiationSession, negotiationSession.getUtilitySpace());
+		this.tftAgent = new BoaTFT(negotiationSession, negotiationSession.getUtilitySpace());
 		
 		this.acceptanceStrategy.setBramAgent(bramAgent);
 		this.acceptanceStrategy.setHHagent(HHagent);
 		this.acceptanceStrategy.setTFTAgent(tftAgent);
-		
-		this.simulator.negotiationSession = negotiationSession;
-		this.simulator.initializeAgents();
-		
-		
-		this.simulator.updateUtilitySpace(negotiationSession.getUtilitySpace());
-		
-		
 		      
 	}
 	
@@ -67,12 +56,26 @@ public class AdaptiveOS extends OfferingStrategy {
 	@Override
 	public BidDetails determineNextBid() {
 		
+		if (simulator.getBestAgent() == null) {
+			
+		    Bid nextBid = this.negotiationSession.getMaxBidinDomain().getBid();
+		    simulator.receiveAction(new Offer(new AgentID("simu"), nextBid));
+		    simulator.evaluatePredictions(negotiationSession.getOpponentBidHistory().getLastBid());
+		    String bestAgent = simulator.getBestAgent();
+			return this.negotiationSession.getMaxBidinDomain();
+			
+		}
 		
-		this.simulator.receiveAction(new Offer(new AgentID("simu"), negotiationSession.getOwnBidHistory().getLastBid()));
+		this.bramAgent.setUtilitySpace(opponentModel.getOpponentUtilitySpace());
+		this.HHagent.setUtilitySpace((AdditiveUtilitySpace) opponentModel.getOpponentUtilitySpace());
+		this.tftAgent.setUtilitySpace(opponentModel.getOpponentUtilitySpace());
+		
+		this.HHagent.ReceiveMessage(new Offer(new AgentID("simu"), negotiationSession.getOwnBidHistory().getLastBid()));
 		this.bramAgent.ReceiveMessage(new Offer(new AgentID("simu"), negotiationSession.getOwnBidHistory().getLastBid()));
-		
+		this.tftAgent.ReceiveMessage(new Offer(new AgentID("simu"), negotiationSession.getOwnBidHistory().getLastBid()));
 		
 		//Get best Agent
+		
 	    simulator.evaluatePredictions(negotiationSession.getOpponentBidHistory().getLastBid());
 	    String bestAgent = simulator.getBestAgent();
 	    
@@ -83,12 +86,18 @@ public class AdaptiveOS extends OfferingStrategy {
 		
 		ActionWithBid hhAction = (ActionWithBid) this.HHagent.chooseAction();
 		ActionWithBid bramAction = (ActionWithBid) this.bramAgent.chooseAction();
+		ActionWithBid tftAction = (ActionWithBid) this.tftAgent.chooseAction();
+		
+		HHagent.setLastAction(hhAction);
+		bramAgent.setLastAction(bramAction);
+		tftAgent.setLastAction(tftAction);
 		
 		
-		
-		if (bestAgent.equals("HH")) {
+		if (bestAgent.equals("Bram")) {
 			nextBid = hhAction.getBid();
-		}else if (bestAgent.equals("Bram")) {
+		}else if (bestAgent.equals("HH")) {
+			nextBid = bramAction.getBid();
+		}else if (bestAgent.equals("TFT")) {
 			nextBid = bramAction.getBid();
 		}
 		
@@ -100,7 +109,7 @@ public class AdaptiveOS extends OfferingStrategy {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return null;
+		return "AdaptiveOS";
 	}
 
 }

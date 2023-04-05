@@ -2,6 +2,7 @@ package OurAgent;
 
 import java.util.Map;
 
+import genius.core.actions.Accept;
 import genius.core.actions.Offer;
 import genius.core.boaframework.AcceptanceStrategy;
 import genius.core.boaframework.Actions;
@@ -12,9 +13,10 @@ import genius.core.boaframework.OpponentModel;
 public class AdaptiveAC extends AcceptanceStrategy {
 	
 	Simulator simulator;
-	private HHAAgent HHagent;
-	private OurBRAMAgent bramAgent;
-	private TFTAgent TFTAgent;
+	private BoaHH HHagent;
+	private BoaBRAM bramAgent;
+	private BoaTFT tftAgent;
+	private final double MIN_UTIL_OPEN = 0.8;
 	
 	public AdaptiveAC() {
 		
@@ -26,16 +28,16 @@ public class AdaptiveAC extends AcceptanceStrategy {
 	}
 	
 	
-	public void setHHagent(HHAAgent hHagent) {
+	public void setHHagent(BoaHH hHagent) {
 		this.HHagent = hHagent;
 	}
 
-	public void setBramAgent(OurBRAMAgent bramAgent) {
+	public void setBramAgent(BoaBRAM bramAgent) {
 		this.bramAgent = bramAgent;
 	}
 	
-	public void setTFTAgent(TFTAgent tftAgent) {
-		this.TFTAgent = tftAgent;
+	public void setTFTAgent(BoaTFT tftAgent) {
+		this.tftAgent = tftAgent;
 	}
 
 	@Override
@@ -48,30 +50,39 @@ public class AdaptiveAC extends AcceptanceStrategy {
 
 	@Override
 	public Actions determineAcceptability() {
-		if (simulator.getBestAgent().equals("HH")) {
+		
+		if(simulator.getBestAgent() == null) {
 			
-			if (simulator.HHPrediction instanceof Offer) {
-				return Actions.Reject;
+			if(negotiationSession.getUtilitySpace().getUtility(negotiationSession.getOpponentBidHistory().getLastBid()) > MIN_UTIL_OPEN) {
+				return Actions.Accept;
+			}else return Actions.Reject;
+			
+		}
+		
+		if (simulator.getBestAgent().equals("Bram")) {
+			
+			if (this.HHagent.getLastAction() instanceof Accept) {
+				return Actions.Accept;
 			}
 			
-		} else if (simulator.getBestAgent().equals("Bram")) {
+		} else if (simulator.getBestAgent().equals("HH")) {
 			
-			if (simulator.BRAMPrediction instanceof Offer) {
-				return Actions.Reject;
+			if (this.bramAgent.getLastAction() instanceof Accept) {
+				return Actions.Accept;
 			}
 		} else if (simulator.getBestAgent().equals("TFT")) {
 			
-			if (simulator.TFTPrediction instanceof Offer) {
-				return Actions.Reject;
+			if (this.bramAgent.getLastAction() instanceof Accept) {
+				return Actions.Accept;
 			}
 		}
-		return Actions.Accept;
+		return Actions.Reject;
 	}
 
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return null;
+		return "AdaptiveAC";
 	}
 	
 }

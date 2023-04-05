@@ -1,22 +1,30 @@
 package OurAgent;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
-import agents.anac.y2010.AgentFSEGA.Hypothesis;
 import genius.core.Bid;
 import genius.core.boaframework.NegotiationSession;
 import genius.core.boaframework.OpponentModel;
+import genius.core.issue.Issue;
+import genius.core.issue.IssueDiscrete;
+import genius.core.issue.Objective;
+import genius.core.issue.Value;
+import genius.core.issue.ValueDiscrete;
+import genius.core.utility.Evaluator;
+import genius.core.utility.EvaluatorDiscrete;
+import genius.core.utility.UtilitySpace;
 
 public class AdaptiveOM extends OpponentModel{
 	
 	Simulator simulator;
 	private Map<Integer, Hypotesis> hypothesis;
 	private Map<Hypotesis, Double> distribution;
-	private double max_value = 15D;
 	
 	public AdaptiveOM(Simulator simulator) {
 		
@@ -27,45 +35,81 @@ public class AdaptiveOM extends OpponentModel{
 		
 	}
 	
-	public List<List<Double>> getCombinations(ArrayList<Double> A, int I) {
-        List<List<Double>> result = new ArrayList<>();
-        if (I == 0) {
-            result.add(new ArrayList<>());
-            return result;
+	private ArrayList<ArrayList<Integer>> valueCombinations(int n) {
+        ArrayList<ArrayList<Integer>> combs = new ArrayList<>();
+        if (n == 0) {
+        	combs.add(new ArrayList<>());
+            return combs;
         }
-        if (I > A.size()) {
-            return result;
+        for (int i = 1; i <= 5; i++) {
+            ArrayList<ArrayList<Integer>> combinazioniParziali = valueCombinations(n - 1);
+            for (ArrayList<Integer> partialCombo : combinazioniParziali) {
+                if (!partialCombo.contains(i)) {
+                    ArrayList<Integer> comb = new ArrayList<>(partialCombo);
+                    comb.add(i);
+                    combs.add(comb);
+                }
+            }
         }
-        List<List<Double>> combinationsWithoutFirst = getCombinations(new ArrayList<Double>(A.subList(1, A.size())), I);
-        List<List<Double>> combinationsWithFirst = getCombinations(new ArrayList<Double>(A.subList(1, A.size())), I - 1);
-        for (List<Double> combination : combinationsWithFirst) {
-            combination.add(0, A.get(0));
-        }
-        result.addAll(combinationsWithoutFirst);
-        result.addAll(combinationsWithFirst);
-        return result;
+        return combs;
     }
 	
 	private void computeHypothesis(int n){
 		
-		List<List<Integer>> combinations = numberCombinations(n+ 1);
-		int counter = 0;
-		ArrayList<Double> sample_list = new ArrayList<>();
+		ArrayList<ArrayList<Integer>> combinations = generate(n);
+		ArrayList<ArrayList<ArrayList<Integer>>> combos = new ArrayList<>();
 		
-		for(double k = 0; k <= max_value; k += max_value/20) {
+		for(Issue i : negotiationSession.getDomain().getIssues()) {
 			
-			sample_list.add(k);
+			IssueDiscrete issue = (IssueDiscrete) i;
+			combos.add(valueCombinations(issue.getValues().size()));
 			
 		}
 		
+		
+		int counter = 0;
+		//combination weights
 		for (int i = 0; i < combinations.size(); i++) {
+			//combination of issue values
+
+			Hypotesis hp = new Hypotesis(combinations.get(i));
 			
-			for(List<Double> list: getCombinations(sample_list, n)) {
-				
-				Hypotesis temp = new Hypotesis(combinations.get(i));
-				temp.setEvaluationFunctionThreshold((ArrayList<Double>) list);
+			for(int j=0; j < combos.size(); j++) {
+				int p = 0;
+				for(Issue is : negotiationSession.getDomain().getIssues()) {
+					
+					IssueDiscrete issue = (IssueDiscrete) is;
+					int k = 0;
+					for (Value val: issue.getValues()) {
+						
+						try {
+							hp.putValue(issue, val, combos.get(p).get(j).get(k++));
+						} catch (Exception e) {
+							
+							System.out.println(val.toString());
+							
+						}
+											
+					}
+					p++;
+				}
 				
 			}
+		
+		this.hypothesis.put(counter++, hp);
+			
+		}
+		
+	}
+	
+	private void initializeDistribution() {
+		
+		int n = this.hypothesis.size();
+		
+		for (Hypotesis hp : hypothesis.values()) {
+			
+			double b = 1D/n;
+			this.distribution.put(hp, b);
 			
 		}
 		
@@ -73,60 +117,118 @@ public class AdaptiveOM extends OpponentModel{
 	
 	
 	
-	private List<List<Integer>> numberCombinations(int n) {
-        List<List<Integer>> result = new ArrayList<>();
-        if (n == 1) {
-            result.add(new ArrayList<Integer>());
-        } else {
-            List<List<Integer>> prev = numberCombinations(n-1);
-            for (List<Integer> sublist : prev) {
-                for (int i = 0; i < n; i++) {
-                    if (!sublist.contains(i)) {
-                        List<Integer> combination = new ArrayList<>(sublist);
-                        combination.add(i);
-                        if (combination.size() == n) {
-                            result.add(combination);
-                        }
-                    }
-                }
-            }
-        }
+	public ArrayList<ArrayList<Integer>> generate(int n) {
+		ArrayList<ArrayList<Integer>> result = new ArrayList<>();
+		ArrayList<Integer> current = new ArrayList<>();
+        generateHelper(n, current, result);
         return result;
     }
-	
-	public double evaluationFunction(double threshold, double x) {
-		
-		
-		double slope_before_threshold = (threshold == 0) ? 1 : 1/threshold;
-		double slope_after_threshold= (threshold == max_value) ? 0 : (-1)/(max_value - threshold);
-		
-		if (x < threshold) {
-			
-			return x*slope_before_threshold;
-			
-		}if (x == threshold) {
-			
-			return 1;
-			
-		}else {
-			return x*slope_after_threshold;
-		}
-	}
+
+    private void generateHelper(int n, ArrayList<Integer> current, ArrayList<ArrayList<Integer>> result) {
+        if (current.size() == n) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+
+        for (int i = 1; i <= n; i++) {
+            if (!current.contains(i)) {
+                current.add(i);
+                generateHelper(n, current, result);
+                current.remove(current.size() - 1);
+            }
+        }
+    }
 	
 	@Override
 	public void init(NegotiationSession negotiationSession, Map<String, Double> parameters) {
 		super.init(negotiationSession, parameters);
 		computeHypothesis(negotiationSession.getDomain().getIssues().size());
-		
-	}
-
-
-	@Override
-	protected void updateModel(Bid bid, double time) {
-		// TODO Auto-generated method stub
+		initializeDistribution();
 		
 	}
 	
+	public double utilityTime(double time) {
+		
+		return 1- 0.05*time;
+		
+	}
+
+	private double computeConditionalProb(Bid bid, Hypotesis hp, double time) {
+		
+		
+		double hpUtil = 0;
+		double o = 0.8;
+		int j = 0;
+		for (Issue i : bid.getIssues()) {
+			
+			IssueDiscrete issue = (IssueDiscrete)i;
+			
+			hpUtil += hp.getWeights().get(j++)*hp.getValue(issue, bid.getValue(i.getNumber()));
+		}
+		return (1D/(o*Math.sqrt(2*Math.PI))*Math.pow(Math.E, -Math.pow(hpUtil - utilityTime(time),2D)/2*o*o));
+	}
+
+	@Override
+	protected void updateModel(Bid bid, double time) {
+		
+		double deno = 0;
+		
+		for (Hypotesis hp : distribution.keySet()) {
+			
+			deno += (1D/distribution.size())*computeConditionalProb(bid, hp, time);
+			
+		}
+		
+		for (Hypotesis hp : distribution.keySet()) {
+			
+			distribution.put(hp, (1D/distribution.size())*computeConditionalProb(bid, hp, time)/deno);
+			
+		}
+	
+		Set<Hypotesis> keys = distribution.keySet();
+		Iterator<Hypotesis> iter = keys.iterator();
+		Hypotesis bestHP = null;
+		float bestHPVal = 0;
+		
+		for(Entry<Hypotesis, Double> entry: distribution.entrySet()) {
+			
+			Hypotesis hp = entry.getKey();
+			double hpVal = entry.getValue();
+			if (hpVal >= bestHPVal){
+				bestHP = hp;
+			}
+			
+		}
+		
+		
+		for(Entry<Objective, Evaluator> e : opponentUtilitySpace.getEvaluators()) {
+			
+			EvaluatorDiscrete value = (EvaluatorDiscrete) e.getValue();
+			IssueDiscrete issue = ((IssueDiscrete) e.getKey());
+			
+			opponentUtilitySpace.setWeight(e.getKey(), bestHP.getWeights().get(issue.getNumber() - 1));
+			
+			
+			for (ValueDiscrete vd : issue.getValues()) {
+				
+				value.setEvaluation(vd, bestHP.getValue(issue, vd));
+				
+			}
+			
+			
+		}
+		
+	}
+	
+	public UtilitySpace getUtilitySpace() {
+		return this.opponentUtilitySpace;
+	}
+	
+	@Override
+	public String getName() {
+		// TODO Auto-generated method stub
+		return "AdaptiveOM";
+	}
 	
 
 }

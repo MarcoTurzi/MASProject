@@ -1,16 +1,11 @@
 package OurAgent;
 
-import java.util.List;
-
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import OurAgent.Simulator;
-import bilateralexamples.boacomponents.AC_Next;
 import bilateralexamples.boacomponents.BestBid;
-import bilateralexamples.boacomponents.HardHeadedFrequencyModel;
-import bilateralexamples.boacomponents.TimeDependent_Offering;
 import genius.core.boaframework.AcceptanceStrategy;
 import genius.core.boaframework.BoaParty;
 import genius.core.boaframework.OMStrategy;
@@ -22,35 +17,26 @@ import genius.core.parties.NegotiationInfo;
 import genius.core.uncertainty.AdditiveUtilitySpaceFactory;
 import genius.core.utility.AbstractUtilitySpace;
 
+public class MixedAgent extends BoaParty {
 
-
-@SuppressWarnings("serial")
-public class MixedAgent extends BoaParty 
-{
-	Simulator simulator;
 	@Override
 	public void init(NegotiationInfo info) 
 	{
 		
-		this.simulator = new Simulator();
-		
-		
+		Simulator simulator = new Simulator();
 		// The choice for each component is made here
-		AcceptanceStrategy 	ac  = new AdaptiveAC(this.simulator);
-		OfferingStrategy 	os  = new AdaptiveOS(this.simulator, (AdaptiveAC) ac);
-		OpponentModel 		om  = new HardHeadedFrequencyModel(); //AdaptiveOM(this.simulator);
+		AcceptanceStrategy 	ac  = new AdaptiveAC(simulator);
+		OfferingStrategy 	os  = new AdaptiveOS(simulator, (AdaptiveAC) ac);
+		OpponentModel 		om  = new AdaptiveOM(simulator);
 		OMStrategy			oms = new BestBid();
 		
 		// All component parameters can be set below.
 		Map<String, Double> noparams = Collections.emptyMap();
-		Map<String, Double> osParams = new HashMap<String, Double>();
 		
-		// Set the concession parameter "e" for the offering strategy to yield Boulware-like behavior
-		//osParams.put("e", 0.2);
 		
 		// Initialize all the components of this party to the choices defined above
 		configure(ac, noparams, 
-				os,	osParams, 
+				os,	noparams, 
 				om, noparams,
 				oms, noparams);
 		super.init(info);
@@ -66,8 +52,6 @@ public class MixedAgent extends BoaParty
 	@Override
 	public AbstractUtilitySpace estimateUtilitySpace() 
 	{
-		// Copied from RandomBoaParty, randomly chosen utility space
-		
 		AdditiveUtilitySpaceFactory additiveUtilitySpaceFactory = new AdditiveUtilitySpaceFactory(getDomain());
 		List<IssueDiscrete> issues = additiveUtilitySpaceFactory.getIssues();
 		for (IssueDiscrete i : issues)
@@ -85,10 +69,9 @@ public class MixedAgent extends BoaParty
 	}
 	
 	@Override
-	public String getDescription() 
-	{
-		return "MixedAgent Example";
+	public String getDescription() {
+		// TODO Auto-generated method stub
+		return "MixedStategy";
 	}
 
-	// All the rest of the agent functionality is defined by the components selected above, using the BOA framework
 }
