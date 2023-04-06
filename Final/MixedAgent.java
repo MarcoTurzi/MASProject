@@ -27,7 +27,7 @@ public class MixedAgent extends BoaParty {
 		AcceptanceStrategy 	ac  = new AdaptiveAC(simulator);
 		OfferingStrategy 	os  = new AdaptiveOS(simulator, (AdaptiveAC) ac);
 		OpponentModel 		om  = new AdaptiveOM(simulator);
-		OMStrategy			oms = new BestBid();
+		OMStrategy			oms = new BestBidVariation();
 		
 		// All component parameters can be set below.
 		Map<String, Double> noparams = Collections.emptyMap();
