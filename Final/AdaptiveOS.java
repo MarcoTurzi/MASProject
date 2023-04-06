@@ -104,7 +104,7 @@ public class AdaptiveOS extends OfferingStrategy {
 				nextBid = bramAction.getBid();
 			}
 			
-			
+			nextBid = this.omStrategy.getBid(new SortedOutcomeSpace(this.negotiationSession.getUtilitySpace()), this.negotiationSession.getUtilitySpace().getUtility(nextBid) ).getBid();
 			simulator.receiveAction(new Offer(new AgentID("simu"), nextBid));
 		}else {
 			
