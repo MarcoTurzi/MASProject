@@ -60,7 +60,7 @@ public class AdaptiveOS extends OfferingStrategy {
 	public BidDetails determineNextBid() {
 		
 		Bid nextBid = null;
-		if (this.negotiationSession.getTime() < 0.95 ) {
+		
 			
 			
 			//update the simulated agents utilityspace using the utilityspace estimated by the opponentmodel
@@ -95,46 +95,39 @@ public class AdaptiveOS extends OfferingStrategy {
 			tftAgent.setLastAction(tftAction);
 			
 			//our agent decide which action to perform 
+			//check if our agent started the negotiation
+			boolean checkFirst = this.negotiationSession.getOpponentBidHistory().size() < this.negotiationSession.getOwnBidHistory().size() ? true: false;
 			
-			if (bestAgent.equals("Bram")) {
-				nextBid = hhAction.getBid();
-			}else if (bestAgent.equals("HH")) {
-				nextBid = bramAction.getBid();
-			}else if (bestAgent.equals("TFT")) {
-				nextBid = bramAction.getBid();
+			if (checkFirst) {
+				
+				if (bestAgent.equals("Bram")) {
+					nextBid = hhAction.getBid();
+				}else if (bestAgent.equals("HH")) {
+					nextBid = bramAction.getBid();
+				}else if (bestAgent.equals("TFT")) {
+					nextBid = hhAction.getBid();
+				}
+				
+			}else {
+				
+				if (bestAgent.equals("Bram")) {
+					nextBid = tftAction.getBid();
+				}else if (bestAgent.equals("HH")) {
+					nextBid = bramAction.getBid();
+				}else if (bestAgent.equals("TFT")) {
+					nextBid = tftAction.getBid();
+				}
+				
 			}
 			
 			nextBid = this.omStrategy.getBid(new SortedOutcomeSpace(this.negotiationSession.getUtilitySpace()), this.negotiationSession.getUtilitySpace().getUtility(nextBid) ).getBid();
 			simulator.receiveAction(new Offer(new AgentID("simu"), nextBid));
-		}else {
-			
-			//if the time is almost done our agent start consulting the omStrategy to get Bid whose utility is the average
-			// between the opponent average utility and itself average utility.
-			double ownAverageUtility = getAvarageUtility(this.negotiationSession.getOwnBidHistory());
-			double opponentAverageUtility = getAvarageUtility(this.negotiationSession.getOpponentBidHistory());
-			double utilityGoal = (ownAverageUtility + opponentAverageUtility)/2;
-			nextBid = this.omStrategy.getBid(new SortedOutcomeSpace(this.negotiationSession.getUtilitySpace()), utilityGoal ).getBid();
-			
-		}
+		
 		
 		return new BidDetails(nextBid, negotiationSession.getUtilitySpace().getUtility(nextBid));
 	}
 	
-	private double getAvarageUtility(BidHistory history) {
-		
-		double sum = 0;
-		for (BidDetails bidD : history.getHistory()) {
-			
-			Bid bid = bidD.getBid();
-			sum += this.negotiationSession.getUtilitySpace().getUtility(bid);
-			
-			
-			
-		}
-		
-		return sum/(this.negotiationSession.getOwnBidHistory().getHistory().size());
-		
-	}
+	
 	
 	@Override
 	public String getName() {
